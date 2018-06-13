@@ -26,6 +26,10 @@ import * as serverDestroy from 'server-destroy';
 import {getPackageName, NPMPackage, resolveWctNpmEntrypointNames} from './config';
 import {Context} from './context';
 
+interface SocketIOServer extends SocketIO.Server {
+  httpServer?: {};
+}
+
 // Template for generated indexes.
 const INDEX_TEMPLATE = _.template(fs.readFileSync(
     path.resolve(__dirname, '../data/index.html'), {encoding: 'utf-8'}));
@@ -62,7 +66,7 @@ const ENVIRONMENT_SCRIPTS: NPMPackage[] = [
 export function webserver(wct: Context): void {
   const options = wct.options;
 
-  wct.hook('configure', async function() {
+  wct.hook('configure', async () => {
     // For now, you should treat all these options as an implementation detail
     // of WCT. They may be opened up for public configuration, but we need to
     // spend some time rationalizing interactions with external webservers.
@@ -113,7 +117,7 @@ export function webserver(wct: Context): void {
         Object.assign({browserScript, a11ySuiteScript}, options));
   });
 
-  wct.hook('prepare', async function() {
+  wct.hook('prepare', async () => {
     const wsOptions = options.webserver;
     const additionalRoutes = new Map<string, RequestHandler>();
 
@@ -169,7 +173,7 @@ Expected to find a ${mdFilenames.join(' or ')} at: ${pathToLocalWct}/
       }
 
       let hasWarnedBrowserJs = false;
-      additionalRoutes.set('/browser.js', function(request, response) {
+      additionalRoutes.set('/browser.js', (request, response) => {
         if (!hasWarnedBrowserJs) {
           console.warn(`
 
@@ -225,6 +229,7 @@ Expected to find a ${mdFilenames.join(' or ')} at: ${pathToLocalWct}/
 
     const onDestroyHandlers: Array<() => Promise<void>> = [];
     const registerServerTeardown = (serverInfo: PolyserveServer) => {
+      // tslint:disable-next-line:no-any
       const destroyableServer = serverInfo.server as any;
       serverDestroy(destroyableServer);
       onDestroyHandlers.push(() => {
@@ -285,7 +290,7 @@ Expected to find a ${mdFilenames.join(' or ')} at: ${pathToLocalWct}/
       // close the socket IO server directly if it is spun up
       for (const io of (wct._socketIOServers || [])) {
         // we will close the underlying server ourselves
-        (<any>io).httpServer = null;
+        (io as SocketIOServer).httpServer = null;
         io.close();
       }
       await Promise.all(onDestroyHandlers.map((f) => f()));

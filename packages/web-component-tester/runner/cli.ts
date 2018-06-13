@@ -28,16 +28,16 @@ const noopNotifier = {
 };
 let updateNotifier = noopNotifier;
 
-(function() {
-try {
-  updateNotifier = require('update-notifier')({pkg: PACKAGE_INFO});
-} catch (error) {
-  // S'ok if we don't have update-notifier. It's optional.
-}
+(() => {
+  try {
+    updateNotifier = require('update-notifier')({pkg: PACKAGE_INFO});
+  } catch (error) {
+    // S'ok if we don't have update-notifier. It's optional.
+  }
 })();
 
 export async function run(
-    _env: any, args: string[], output: NodeJS.WritableStream): Promise<void> {
+    _env: {}, args: string[], output: NodeJS.WritableStream): Promise<void> {
   await wrapResult(output, _run(args, output));
 }
 
@@ -53,10 +53,10 @@ async function _run(args: string[], output: NodeJS.WritableStream) {
   // configuration so that we know which plugins to load, etc:
   let options = config.preparseArgs(args) as config.Config;
   // Depends on values from the initial merge:
-  options = config.merge(options, <config.Config>{
-    output: output,
+  options = config.merge(options, {
+    output,
     ttyOutput: !process.env.CI && output['isTTY'] && !options.simpleOutput,
-  });
+  } as config.Config);
   const context = new Context(options);
 
   if (options.skipUpdateCheck) {
@@ -72,7 +72,7 @@ async function _run(args: string[], output: NodeJS.WritableStream) {
 // wct-sauce. The trouble is that we also want WCT's configuration lookup logic,
 // and that's not (yet) cleanly exposed.
 export async function runSauceTunnel(
-    _env: any, args: string[], output: NodeJS.WritableStream): Promise<void> {
+    _env: {}, args: string[], output: NodeJS.WritableStream): Promise<void> {
   await wrapResult(output, _runSauceTunnel(args, output));
 }
 
@@ -95,11 +95,12 @@ async function _runSauceTunnel(args: string[], output: NodeJS.WritableStream) {
   wctSauce.expandOptions(options);
 
   const emitter = new events.EventEmitter();
-  new CliReporter(emitter, output, <config.Config>{});
+  // tslint:disable-next-line:no-unused-expression
+  new CliReporter(emitter, output, {} as config.Config);
   const tunnelId = await new Promise<string>((resolve, reject) => {
-    wctSauce.startTunnel(
+    wctSauce.wrapResult(
         options, emitter,
-        (error: any, tunnelId: string) =>
+        (error: string, tunnelId: string) =>
             error ? reject(error) : resolve(tunnelId));
   });
 
@@ -115,7 +116,7 @@ async function _runSauceTunnel(args: string[], output: NodeJS.WritableStream) {
 
 async function wrapResult(
     output: NodeJS.WritableStream, promise: Promise<void>) {
-  let error: any;
+  let error: string;
   try {
     await promise;
   } catch (e) {

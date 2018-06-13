@@ -69,7 +69,7 @@ export interface TestEndData {
    */
   test: string[];
   duration: number;
-  error: any;
+  error: Error;
 }
 
 export class CliReporter {
@@ -135,7 +135,7 @@ export class CliReporter {
         });
 
     emitter.on(
-        'browser-end', (browser: BrowserDef, error: any, stats: Stats) => {
+        'browser-end', (browser: BrowserDef, error: Error, stats: Stats) => {
           this.browserStats[browser.id] = stats;
           if (error) {
             this.log(chalk.red, browser, 'Tests failed:', error);
@@ -144,7 +144,7 @@ export class CliReporter {
           }
         });
 
-    emitter.on('run-end', (error: any) => {
+    emitter.on('run-end', (error: Error) => {
       if (error) {
         this.log(chalk.red, 'Test run ended in failure:', error);
       } else {
@@ -168,24 +168,29 @@ export class CliReporter {
     // state:  The state that the run is in (running, etc).
     // status: A string representation of above.
     const statuses = Object.keys(this.browserStats).map((browserIdStr) => {
-      const browserId = parseInt(browserIdStr, 10);
+      const browserId = Number(browserIdStr);
       const pretty = this.prettyBrowsers[browserId];
       const stats = this.browserStats[browserId];
 
-      let status = '';
-      const counts = [stats.passing, stats.pending, stats.failing];
-      if (counts[0] > 0 || counts[1] > 0 || counts[2] > 0) {
-        if (counts[0] > 0) {
-          counts[0] = <any>chalk.green(counts[0].toString());
-        }
-        if (counts[1] > 0) {
-          counts[1] = <any>chalk.yellow(counts[1].toString());
-        }
-        if (counts[2] > 0) {
-          counts[2] = <any>chalk.red(counts[2].toString());
-        }
-        status = counts.join('/');
+      type TestStats = 'passing'|'pending'|'failing';
+      interface ColorizedSelector {
+        formatter: chalk.ChalkChain;
+        property: TestStats;
       }
+      const statsSelectors: ColorizedSelector[] = [
+        {formatter: chalk.green, property: 'passing'},
+        {formatter: chalk.yellow, property: 'pending'},
+        {formatter: chalk.red, property: 'failing'}
+      ];
+
+      const format = (formatter: chalk.ChalkChain, value: number) =>
+          (value > 0 ? formatter(value.toString()) : value.toString());
+
+      let status = statsSelectors
+                       .map(({formatter,
+                              property}) => format(formatter, stats[property]))
+                       .join('/');
+
       if (stats.status === 'error') {
         status = status + (status === '' ? '' : ' ') + chalk.red('error');
       }
@@ -202,13 +207,13 @@ export class CliReporter {
     const error = data.error || {};
     this.write('\n');
 
-    let prettyMessage = error.message || error;
+    let prettyMessage = (error as Error).message || error;
     if (typeof prettyMessage !== 'string') {
       prettyMessage = util.inspect(prettyMessage);
     }
     this.write(chalk.red('  ' + prettyMessage));
 
-    if (error.stack) {
+    if ((error as Error).stack) {
       try {
         this.write(stacky.pretty(data.error.stack, STACKY_CONFIG));
       } catch (err) {
@@ -254,7 +259,7 @@ export class CliReporter {
 
   // General Output Formatting
 
-  log(...values: any[]): void;
+  log(...values: Array<Function|string|{}>): void;
   log() {
     let values = Array.from(arguments);
     let format: (line: string) => string;
@@ -283,7 +288,7 @@ export class CliReporter {
     }
 
     const lines = [''];
-    const width = (<tty.WriteStream>this.stream).columns || 0;
+    const width = (this.stream as tty.WriteStream).columns || 0;
     for (const block of blocks) {
       const line = lines[lines.length - 1];
       const combined = line + separator + block;

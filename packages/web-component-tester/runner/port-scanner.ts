@@ -15,23 +15,23 @@
 import * as net from 'net';
 
 function checkPort(port: number): Promise<boolean> {
-  return new Promise<boolean>(function(resolve) {
+  return new Promise<boolean>((resolve) => {
     const server = net.createServer();
     let hasPort = false;
 
     // if server is listening, we have the port!
-    server.on('listening', function(_err: any) {
+    server.on('listening', () => {
       hasPort = true;
       server.close();
     });
 
     // callback on server close to free up the port before report it can be used
-    server.on('close', function(_err: any) {
+    server.on('close', () => {
       resolve(hasPort);
     });
 
     // our port is busy, ignore it
-    server.on('error', function(_err: any) {
+    server.on('error', () => {
       // docs say the server should close, this doesn't seem to be the case :(
       server.close();
     });
