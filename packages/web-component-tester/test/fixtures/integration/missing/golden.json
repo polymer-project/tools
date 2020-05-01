@@ -1,6 +1,7 @@
 {
   "passing": 0,
   "pending": 0,
-  "failing": 0,
+  "failing": 0, 
+  "total": 0,
   "status": "error"
 }

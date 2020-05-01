@@ -1,7 +1,8 @@
 {
   "passing": 3,
   "pending": 0,
-  "failing": 3,
+  "failing": 3, 
+  "total": 6,
   "status": "complete",
   "tests": {
     "test/": {

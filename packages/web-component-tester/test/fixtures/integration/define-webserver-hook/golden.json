@@ -1,7 +1,8 @@
 {
   "passing": 2,
   "pending": 0,
-  "failing": 0,
+  "failing": 0, 
+  "total": 2,
   "status": "complete",
   "tests": {
     "test/tests.html": {
