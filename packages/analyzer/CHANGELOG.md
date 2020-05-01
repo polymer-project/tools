@@ -5,8 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-<!-- ## Unreleased -->
-<!-- Add new, unreleased changes here. -->
+## Unreleased
+* Ignore custom element life-cycle methods when scanning element classes
 
 ## [3.2.4] - 2019-07-09
 * Merge property information from constructors into associated scanned
